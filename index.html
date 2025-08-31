@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ABIERTO Teleport</title>
+  <style>
+    @font-face {
+      font-family: 'CustomFont';
+      src: url('assets/font.ttf') format('truetype');
+    }
+
+    body {
+      margin: 0;
+      background: black;
+      color: white;
+      font-family: 'CustomFont', sans-serif;
+      text-align: center;
+    }
+
+    /* Loading screen */
+    #loadingScreen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #loadingScreen img {
+      width: 60px;
+      margin-bottom: 10px;
+    }
+    #loadingTitle {
+      font-size: 28px;
+      margin-bottom: 30px;
+    }
+    .shuriken {
+      width: 80px;
+      aspect-ratio: 1;
+      display: grid;
+      color: white;
+      background:
+        conic-gradient(from -153deg at right,#0000,currentColor 1deg 126deg,#0000 127deg) calc(50% + 5px) 0   /10px 50%,
+        conic-gradient(from   27deg at left ,#0000,currentColor 1deg 126deg,#0000 127deg) calc(50% - 5px) 100%/10px 50%,
+        linear-gradient(to top    right,currentColor 50%,#0000 0%) calc(50% + 10px) calc(50% - 10px) /20px 20px,
+        linear-gradient(to bottom left ,currentColor 50%,#0000 0%) calc(50% - 10px) calc(50% + 10px) /20px 20px;
+      background-repeat: no-repeat;
+      -webkit-mask: radial-gradient(circle 5px,#0000 90%,#000);
+      animation: spin 1.5s infinite linear;
+      margin-bottom: 20px;
+    }
+    .shuriken:before,
+    .shuriken:after {
+      content: "";
+      grid-area: 1/1;
+      background: inherit;
+      transform: rotate(60deg);
+    }
+    .shuriken:after { transform: rotate(120deg); }
+    @keyframes spin { 100%{transform: rotate(1turn)} }
+
+    .loader {
+      width: 80px;
+      height: 40px;
+      color: white;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      padding: 3px;
+      background:
+        repeating-linear-gradient(90deg,currentColor 0 10px,#0000 0 15px)
+        0/0% no-repeat content-box content-box;
+      position: relative;
+      animation: loadBar 2s infinite steps(6);
+    }
+    .loader::before {
+      content: "";
+      position: absolute;
+      top: -2px; bottom: -2px; left: 100%;
+      width: 10px;
+      background:
+        linear-gradient(#0000 calc(50% - 7px),currentColor 0 calc(50% - 5px),
+        #0000 0 calc(50% + 5px),currentColor 0 calc(50% + 7px),#0000 0) left/100% 100%,
+        linear-gradient(currentColor calc(50% - 5px),#0000 0 calc(50% + 5px),currentColor 0) left/2px 100%,
+        linear-gradient(#0000 calc(50% - 5px),currentColor 0 calc(50% + 5px),#0000 0) right/2px 100%;
+      background-repeat:no-repeat;
+    }
+    @keyframes loadBar { 100% {background-size:120%} }
+
+    /* Main screen */
+    #mainScreen { display: none; padding: 20px; }
+    #mainScreen img {
+      width: 80px;
+      margin-bottom: 10px;
+    }
+    #mainTitle { font-size: 40px; margin-bottom: 40px; }
+
+    .btn {
+      background: none;
+      border: 2px solid white;
+      color: white;
+      padding: 15px 30px;
+      margin: 20px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .form {
+      display: none;
+      margin-top: 20px;
+    }
+    .form input {
+      display: block;
+      margin: 10px auto;
+      padding: 10px;
+      width: 220px;
+      border: none;
+      background: white;
+      color: black;
+      font-size: 16px;
+      text-align: center;
+    }
+    .form button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: white;
+      border: none;
+      color: black;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading -->
+  <div id="loadingScreen">
+    <img src="assets/logo.jpg" alt="Logo">
+    <div id="loadingTitle">ABIERTO</div>
+    <div class="shuriken"></div>
+    <div class="loader"></div>
+  </div>
+
+  <!-- Main -->
+  <div id="mainScreen">
+    <img src="assets/logo.jpg" alt="Logo">
+    <div id="mainTitle">ABIERTO</div>
+    <button class="btn" onclick="showForm('createForm')">Create Portal</button>
+    <button class="btn" onclick="showForm('teleportForm')">Teleport</button>
+
+    <!-- Create Portal -->
+    <div id="createForm" class="form">
+      <input type="text" id="createID" placeholder="Enter Alpha ID" pattern="[A-Za-z]+" required>
+      <input type="number" id="createPass" placeholder="Set Password (Numbers only)" required>
+      <input type="url" id="createLink" placeholder="Enter Link" required>
+      <button onclick="createPortal()">CREATE PORTAL</button>
+    </div>
+
+    <!-- Teleport -->
+    <div id="teleportForm" class="form">
+      <input type="text" id="teleID" placeholder="Enter Alpha ID" pattern="[A-Za-z]+" required>
+      <input type="number" id="telePass" placeholder="Enter Password (Numbers only)" required>
+      <button onclick="teleport()">TELEPORT</button>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = "CZ4P7QzLlT90pXgPy8gxF8XnehJp0c8ZLrK2Nu5bOwLJIvGLPwetZrDaZRdr";
+    let portals = {};
+
+    // Loading screen
+    setTimeout(() => {
+      document.getElementById("loadingScreen").style.display = "none";
+      document.getElementById("mainScreen").style.display = "block";
+    }, 4000);
+
+    function showForm(formId) {
+      document.querySelectorAll('.form').forEach(f => f.style.display = 'none');
+      document.getElementById(formId).style.display = 'block';
+    }
+
+    async function createPortal() {
+      let id = document.getElementById("createID").value.trim();
+      let pass = document.getElementById("createPass").value.trim();
+      let link = document.getElementById("createLink").value.trim();
+      if (!/^[A-Za-z]+$/.test(id)) { alert("ID must be alphabets only!"); return; }
+      if (!/^[0-9]+$/.test(pass)) { alert("Password must be numbers only!"); return; }
+      let key = id + pass;
+
+      // Use TinyURL API
+      let res = await fetch("https://api.tinyurl.com/create", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ url: link, domain: "tinyurl.com" })
+      });
+      let data = await res.json();
+
+      if (data.data && data.data.tiny_url) {
+        portals[key] = data.data.tiny_url;
+        alert("Portal created! Share ID and Password.");
+      } else {
+        alert("Error creating portal.");
+      }
+    }
+
+    function teleport() {
+      let id = document.getElementById("teleID").value.trim();
+      let pass = document.getElementById("telePass").value.trim();
+      let key = id + pass;
+      if (portals[key]) {
+        window.location.href = portals[key];
+      } else {
+        alert("Wrong ID or Password!");
+      }
+    }
+  </script>
+</body>
+</html>
